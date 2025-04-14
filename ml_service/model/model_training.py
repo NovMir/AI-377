@@ -24,6 +24,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, BatchNormalization
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.regularizers import l2 
 import tensorflow as tf
 import joblib
 import warnings
@@ -477,64 +478,49 @@ def train_neural_network(X_train, X_test, y_train, y_test, preprocessor):
     """
     print("\nTraining Neural Network model...")
     
-    # Process the data with the preprocessor
+    
+      # Process features
     X_train_processed = preprocessor.fit_transform(X_train)
     X_test_processed = preprocessor.transform(X_test)
     
-    # Split train data to create a validation set
+    # Scale the target variable
+    y_scaler = StandardScaler()
+    y_train_scaled = y_scaler.fit_transform(y_train.values.reshape(-1, 1)).flatten()
+    y_test_scaled = y_scaler.transform(y_test.values.reshape(-1, 1)).flatten()
+    
+    # Split for validation
     X_train_split, X_val, y_train_split, y_val = train_test_split(
-        X_train_processed, y_train, test_size=0.2, random_state=42
+        X_train_processed, y_train_scaled, test_size=0.2, random_state=42
     )
     
-    # Get input dimensions
+    # Build simpler model with regularization
     input_dim = X_train_processed.shape[1]
-    
-    # Build the model
     model = Sequential([
-        Dense(128, activation='relu', input_shape=(input_dim,)),
-        BatchNormalization(),
-        Dropout(0.3),
-        Dense(64, activation='relu'),
-        BatchNormalization(),
-        Dropout(0.3),
-        Dense(32, activation='relu'),
+        Dense(64, activation='relu', input_shape=(input_dim,), kernel_regularizer=l2(0.001)),
         BatchNormalization(),
         Dropout(0.2),
-        Dense(1)  # Output layer
+        Dense(32, activation='relu', kernel_regularizer=l2(0.001)),
+        BatchNormalization(),
+        Dropout(0.2),
+        Dense(16, activation='relu', kernel_regularizer=l2(0.001)),
+        Dense(1)
     ])
     
-    # Compile the model
+    # Compile with custom metrics
     model.compile(
         optimizer=Adam(learning_rate=0.001),
         loss='mean_squared_error',
         metrics=['mae']
     )
     
-    # Define callbacks
+    # Train with robust callbacks
     callbacks = [
-        EarlyStopping(
-            monitor='val_loss',
-            patience=20,
-            restore_best_weights=True,
-            verbose=1
-        ),
-        ReduceLROnPlateau(
-            monitor='val_loss',
-            factor=0.5,
-            patience=10,
-            min_lr=1e-6,
-            verbose=1
-        ),
-        ModelCheckpoint(
-            filepath='models/neural_network_model.weights.h5',
-            monitor='val_loss',
-            save_best_only=True,
-            save_weights_only=True,
-            verbose=1
-        )
+        EarlyStopping(monitor='val_loss', patience=15, restore_best_weights=True),
+        ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=1e-6),
+        ModelCheckpoint(filepath='models/nn_model.weights.h5', monitor='val_loss', save_best_only=True)
     ]
     
-    # Train the model
+    # Train model
     history = model.fit(
         X_train_split, y_train_split,
         validation_data=(X_val, y_val),
@@ -544,15 +530,35 @@ def train_neural_network(X_train, X_test, y_train, y_test, preprocessor):
         verbose=1
     )
     
-    # Plot training history
-    plot_training_history(history)
-    
-    # Save preprocessor separately for neural network
+    # Save components
+    model.save('models/neural_network_model.h5')
+    joblib.dump(y_scaler, 'models/neural_network_y_scaler.pkl')
     joblib.dump(preprocessor, 'models/neural_network_preprocessor.pkl')
-    print("Neural Network preprocessor saved to 'models/neural_network_preprocessor.pkl'")
     
-    # Evaluate model
-    metrics = evaluate_model(model, X_test_processed, y_test, "Neural Network")
+    # Evaluate with inverse scaling
+    y_pred_scaled = model.predict(X_test_processed).flatten()
+    y_pred = y_scaler.inverse_transform(y_pred_scaled.reshape(-1, 1)).flatten()
+    
+    # Evaluate with proper scaling
+    metrics = {
+        'model_name': "Neural Network",
+        'mse': mean_squared_error(y_test, y_pred),
+        'rmse': np.sqrt(mean_squared_error(y_test, y_pred)),
+        'mae': mean_absolute_error(y_test, y_pred),
+        'r2': r2_score(y_test, y_pred),
+        'predictions': y_pred
+    }
+    
+    # Print metrics and create visualizations
+    print(f"\nNeural Network Performance:")
+    print(f" - MSE : {metrics['mse']:.2f}")
+    print(f" - RMSE: {metrics['rmse']:.2f}")
+    print(f" - MAE : {metrics['mae']:.2f}")
+    print(f" - R²  : {metrics['r2']:.4f}")
+    
+    # Create visualizations
+    plot_training_history(history)
+    plot_predictions(y_test, y_pred, "Neural Network")
     
     return model, metrics
 
