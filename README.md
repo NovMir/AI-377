@@ -11,7 +11,39 @@ This system was developed as part of the COMP377 course project on "Developing F
 3. RESTful API development
 4. Interactive dashboard creation
 
-The application follows modern software architecture principles, implementing the MVC design pattern for the backend API and using a component-based architecture for the frontend.
+The system uses property data from four cities in Ontario:
+
+Oakville (454 properties)
+Guelph (320 properties)
+Mississauga (393 properties)
+Milton (436 properties)
+Data Processing Steps
+Load individual city datasets
+Combine all datasets into a single dataframe
+Add city identification column
+Handle missing values:
+Fill missing price values with city means
+Drop completely empty columns (zestimate, rentZestimate)
+Save processed data to ml_service/data/processed/combined_properties.csv
+Dataset Structure
+The combined dataset contains 1603 properties with the following columns:
+
+address: Property address
+zipCode: Postal code
+city: City name
+state: Province (ON)
+price: Property price (float64)
+bed: Number of bedrooms
+bath: Number of bathrooms
+sqft: Square footage
+pricePerSf: Price per square foot
+lotArea: Lot area
+lotAreaType: Lot area unit (sqft/acres)
+zillowUrl: Zillow listing URL
+latitude: Property latitude
+longitude: Property longitude
+homeType: Type of property
+imageUrl: Property image URL
 
 ## Directory Structure
 
