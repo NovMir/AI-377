@@ -103,7 +103,7 @@ The application follows modern software architecture principles, implementing th
 ### Step 1: Clone the Repository (or download)
 
 ```bash
-git clone https://github.com/yourusername/real-estate-prediction.git
+git clone https://github.com/NovMir/AI-377.git
 cd real-estate-prediction
 ```
 
