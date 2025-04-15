@@ -24,7 +24,7 @@ app = Flask(__name__)
 CORS(app)  # Enable Cross-Origin Resource Sharing
 
 # Constants
-MODEL_PATH = r"C:\Users\novee\House Prediction\AI-377\ml_service\model\models\best_model.pkl"
+MODEL_PATH = r"C:\House Prediction\AI-377\ml_service\model\models\best_model.pkl"
 MODEL_INFO_PATH = os.path.join(os.path.dirname(MODEL_PATH), "model_performance.csv")
 
 # Global variables to store model and preprocessor
